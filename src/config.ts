@@ -12,6 +12,9 @@ export const configSchema = z.object({
 	languages: z
 		.preprocess((v) => (typeof v === 'string' ? v.split(',') : ['en']), z.array(z.string()))
 		.default(['en']),
+	withMiddleware: configBoolean.default('false'),
+	withShield: configBoolean.default('false'),
+	contextPath: z.string().optional(),
 })
 
 export type Config = z.infer<typeof configSchema>

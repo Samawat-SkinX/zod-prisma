@@ -7,6 +7,8 @@ import { SemicolonPreference } from 'typescript'
 import { configSchema, PrismaOptions } from './config'
 import { generateBarrelFile, populateModelFile } from './generator'
 import { createJsonHelperFile } from './jsonHelper'
+import { createMiddlewareFile } from './middlewareGenerator'
+import { createShieldFile } from './shieldGenerator'
 import { EnumModel } from './types'
 
 generatorHandler({
@@ -76,6 +78,20 @@ generatorHandler({
 		})
 
 		createJsonHelperFile(project, outputPath, indexFile)
+
+		if (config.withMiddleware) {
+			createMiddlewareFile(models, project, config, {
+				...prismaOptions,
+				contextPath: config.contextPath,
+			})
+		}
+
+		if (config.withShield) {
+			createShieldFile(models, project, config, {
+				...prismaOptions,
+				contextPath: config.contextPath,
+			})
+		}
 
 		return project.save()
 	},

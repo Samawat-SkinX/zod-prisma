@@ -11,7 +11,7 @@ function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'defau
 
 var path__default = /*#__PURE__*/_interopDefaultLegacy(path);
 
-var version = "0.5.6";
+var version = "0.5.2-prisma7";
 
 const configBoolean = /*#__PURE__*/zod.z.enum(['true', 'false']).transform(arg => JSON.parse(arg));
 const configSchema = /*#__PURE__*/zod.z.object({
@@ -21,7 +21,10 @@ const configSchema = /*#__PURE__*/zod.z.object({
   useDecimalJs: /*#__PURE__*/configBoolean.default('false'),
   imports: /*#__PURE__*/zod.z.string().optional(),
   prismaJsonNullability: /*#__PURE__*/configBoolean.default('true'),
-  languages: /*#__PURE__*/zod.z.preprocess(v => typeof v === 'string' ? v.split(',') : ['en'], zod.z.array(zod.z.string())).default(['en'])
+  languages: /*#__PURE__*/zod.z.preprocess(v => typeof v === 'string' ? v.split(',') : ['en'], zod.z.array(zod.z.string())).default(['en']),
+  withMiddleware: /*#__PURE__*/configBoolean.default('false'),
+  withShield: /*#__PURE__*/configBoolean.default('false'),
+  contextPath: /*#__PURE__*/zod.z.string().optional()
 });
 
 const writeArray = (writer, array, newLine = true) => array.forEach(line => writer.write(line).conditionalNewLine(newLine));
@@ -329,6 +332,106 @@ const generateBarrelFile = (models, indexFile) => {
   }));
 };
 
+function createMiddlewareFile(models, project, config, {
+  outputPath,
+  contextPath
+}) {
+  const {
+    modelName
+  } = useModelNames(config);
+  const sourceFile = project.createSourceFile(`${outputPath}/middleware.ts`, {}, {
+    overwrite: true
+  });
+  const imports = [{
+    kind: tsMorph.StructureKind.ImportDeclaration,
+    namedImports: models.map(m => modelName(m.name)),
+    moduleSpecifier: './index'
+  }];
+
+  if (contextPath) {
+    imports.push({
+      kind: tsMorph.StructureKind.ImportDeclaration,
+      isTypeOnly: true,
+      namedImports: ['Context'],
+      moduleSpecifier: contextPath
+    });
+  }
+
+  sourceFile.addImportDeclarations(imports);
+  models.forEach(model => {
+    const name = modelName(model.name);
+    sourceFile.addStatements(writer => {
+      writer.newLine();
+      writeArray(writer, [`export function parse${model.name}(data: unknown) {`, `  return ${name}.parse(data)`, `}`]);
+      writer.newLine();
+      writeArray(writer, [`export function safeParse${model.name}(data: unknown) {`, `  return ${name}.safeParse(data)`, `}`]);
+    });
+  });
+  sourceFile.addVariableStatement({
+    declarationKind: tsMorph.VariableDeclarationKind.Const,
+    isExported: true,
+    leadingTrivia: writer => writer.newLine(),
+    declarations: [{
+      name: 'validators',
+
+      initializer(writer) {
+        writer.write('{').newLine();
+        models.forEach(model => {
+          writer.writeLine(`  ${model.name}: ${modelName(model.name)},`);
+        });
+        writer.write('} as const');
+      }
+
+    }]
+  });
+}
+
+function createShieldFile(models, project, _config, {
+  outputPath,
+  contextPath
+}) {
+  const sourceFile = project.createSourceFile(`${outputPath}/shield.ts`, {}, {
+    overwrite: true
+  });
+  const imports = [{
+    kind: tsMorph.StructureKind.ImportDeclaration,
+    namedImports: ['allow', 'deny', 'rule', 'shield'],
+    moduleSpecifier: 'graphql-shield'
+  }];
+
+  if (contextPath) {
+    imports.push({
+      kind: tsMorph.StructureKind.ImportDeclaration,
+      isTypeOnly: true,
+      namedImports: ['Context'],
+      moduleSpecifier: contextPath
+    });
+  }
+
+  sourceFile.addImportDeclarations(imports);
+  const ctxType = contextPath ? 'Context' : 'any';
+  sourceFile.addStatements(writer => {
+    writer.newLine();
+    writeArray(writer, [`const isAuthenticated = rule({ cache: 'contextual' })(`, `  async (_parent: unknown, _args: unknown, ctx: ${ctxType}) => {`, `    return ctx?.user != null`, `  }`, `)`]);
+  });
+  sourceFile.addStatements(writer => {
+    writer.newLine();
+    writer.writeLine('export const permissions = shield({');
+    writer.writeLine('  Query: {');
+    writer.writeLine("    '*': allow,");
+    writer.writeLine('  },');
+    writer.writeLine('  Mutation: {');
+    writer.writeLine("    '*': isAuthenticated,");
+    writer.writeLine('  },');
+    models.forEach(model => {
+      writer.writeLine(`  ${model.name}: {`);
+      writer.writeLine("    '*': allow,");
+      writer.writeLine('  },');
+    });
+    writer.writeLine('})');
+  });
+}
+
 // @ts-ignore Importing package.json for automated synchronization of version numbers
 generatorHelper.generatorHandler({
   onManifest() {
@@ -383,6 +486,19 @@ generatorHelper.generatorHandler({
       });
     });
     createJsonHelperFile(project, outputPath, indexFile);
+
+    if (config.withMiddleware) {
+      createMiddlewareFile(models, project, config, { ...prismaOptions,
+        contextPath: config.contextPath
+      });
+    }
+
+    if (config.withShield) {
+      createShieldFile(models, project, config, { ...prismaOptions,
+        contextPath: config.contextPath
+      });
+    }
+
     return project.save();
   }
 
