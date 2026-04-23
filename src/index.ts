@@ -22,12 +22,12 @@ generatorHandler({
 
 		const models = options.dmmf.datamodel.models
 		const enums: EnumModel =
-			options.dmmf.schema.enumTypes.model?.reduce((prev, enumModel) => {
+			options.dmmf.schema.enumTypes.model?.reduce<EnumModel>((prev, enumModel) => {
 				return { ...prev, [enumModel.name]: enumModel }
 			}, {}) ?? {}
 
 		const { schemaPath } = options
-		const outputPath = options.generator.output!.value
+		const outputPath = options.generator.output!.value!
 		const clientPath = options.otherGenerators.find(
 			(each) => each.provider.value === 'prisma-client-js'
 		)!.output!.value!

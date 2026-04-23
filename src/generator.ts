@@ -270,7 +270,7 @@ export const populateModelFile = (
 		generateRelatedSchemaForModel(model, enums, sourceFile, config, prismaOptions)
 }
 
-export const generateBarrelFile = (models: DMMF.Model[], indexFile: SourceFile) => {
+export const generateBarrelFile = (models: readonly DMMF.Model[], indexFile: SourceFile) => {
 	models.forEach((model) =>
 		indexFile.addExportDeclaration({
 			moduleSpecifier: `./${model.name.toLowerCase()}`,
