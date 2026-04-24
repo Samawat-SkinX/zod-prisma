@@ -1,5 +1,11 @@
 import { DMMF } from '@prisma/generator-helper'
-import { OptionalKind, ImportDeclarationStructure, Project, StructureKind, VariableDeclarationKind } from 'ts-morph'
+import {
+	OptionalKind,
+	ImportDeclarationStructure,
+	Project,
+	StructureKind,
+	VariableDeclarationKind,
+} from 'ts-morph'
 import { Config, PrismaOptions } from './config'
 import { useModelNames, writeArray } from './util'
 
@@ -10,7 +16,11 @@ export function createMiddlewareFile(
 	{ outputPath, contextPath }: PrismaOptions & { contextPath?: string }
 ) {
 	const { modelName } = useModelNames(config)
-	const sourceFile = project.createSourceFile(`${outputPath}/middleware.ts`, {}, { overwrite: true })
+	const sourceFile = project.createSourceFile(
+		`${outputPath}/middleware.ts`,
+		{},
+		{ overwrite: true }
+	)
 
 	const imports: OptionalKind<ImportDeclarationStructure>[] = [
 		{

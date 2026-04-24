@@ -57,7 +57,9 @@ describe('getZodConstructor – optional / list', () => {
 
 	it('adds both .array() and .nullish() for optional list', () => {
 		const field = makeField({ type: 'String', isList: true, isRequired: false })
-		expect(getZodConstructor(field, emptyEnums, defaultConfig)).toBe('z.string().array().nullish()')
+		expect(getZodConstructor(field, emptyEnums, defaultConfig)).toBe(
+			'z.string().array().nullish()'
+		)
 	})
 })
 
@@ -96,7 +98,9 @@ describe('getZodConstructor – JSON / languages', () => {
 
 	it('Json *Tr field with genTr=false falls back to jsonSchema', () => {
 		const field = makeField({ name: 'nameTr', type: 'Json', kind: 'scalar' })
-		expect(getZodConstructor(field, emptyEnums, configEnTh, undefined, false)).toBe('jsonSchema')
+		expect(getZodConstructor(field, emptyEnums, configEnTh, undefined, false)).toBe(
+			'jsonSchema'
+		)
 	})
 
 	it('Json field not ending in Tr always uses jsonSchema regardless of languages', () => {

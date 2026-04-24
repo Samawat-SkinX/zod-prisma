@@ -11,7 +11,7 @@ function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'defau
 
 var path__default = /*#__PURE__*/_interopDefaultLegacy(path);
 
-var version = "0.5.2-prisma7";
+var version = "0.5.3-prisma7";
 
 const configBoolean = /*#__PURE__*/zod.z.enum(['true', 'false']).transform(arg => JSON.parse(arg));
 const configSchema = /*#__PURE__*/zod.z.object({
