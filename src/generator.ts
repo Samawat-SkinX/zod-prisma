@@ -45,17 +45,21 @@ export const writeImportsForModel = (
 		})
 	}
 
-	// Only import jsonSchema when the generated file actually references it: a
-	// Json field emits `jsonSchema` unless it's overridden by a @zod.custom()
-	// directive. Tr Json fields still need it because the *Response variant
-	// (genTr=false) falls back to jsonSchema for them. Skipping the import when
-	// every Json field has a custom schema avoids an unused-import lint error.
+	// Only import jsonSchema when the generated file actually references it. A
+	// Json field emits `jsonSchema` unless a @zod.custom() directive overrides
+	// it — but a custom schema may itself reference jsonSchema (e.g.
+	// `jsonSchema.pipe(...)`), in which case the import is still needed. Tr Json
+	// fields also need it because the *Response variant (genTr=false) falls back
+	// to jsonSchema. Skipping the import only when no Json field references
+	// jsonSchema avoids an unused-import lint error.
 	if (
-		model.fields.some(
-			(f) =>
-				f.type === 'Json' &&
-				(f.name.endsWith('Tr') || !computeCustomSchema(f.documentation ?? ''))
-		)
+		model.fields.some((f) => {
+			if (f.type !== 'Json') return false
+			if (f.name.endsWith('Tr')) return true
+			const custom = computeCustomSchema(f.documentation ?? '')
+			if (!custom) return true
+			return custom.includes('jsonSchema')
+		})
 	) {
 		importList.push({
 			kind: StructureKind.ImportDeclaration,
