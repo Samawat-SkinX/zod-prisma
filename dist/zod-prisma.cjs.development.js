@@ -202,9 +202,18 @@ const writeImportsForModel = (model, sourceFile, config, {
       namedImports: ['Decimal'],
       moduleSpecifier: 'decimal.js'
     });
-  }
+  } // Only import jsonSchema when the generated file actually references it: a
+  // Json field emits `jsonSchema` unless it's overridden by a @zod.custom()
+  // directive. Tr Json fields still need it because the *Response variant
+  // (genTr=false) falls back to jsonSchema for them. Skipping the import when
+  // every Json field has a custom schema avoids an unused-import lint error.
 
-  if (model.fields.some(f => f.type === 'Json')) {
+
+  if (model.fields.some(f => {
+    var _f$documentation;
+
+    return f.type === 'Json' && (f.name.endsWith('Tr') || !computeCustomSchema((_f$documentation = f.documentation) != null ? _f$documentation : ''));
+  })) {
     importList.push({
       kind: tsMorph.StructureKind.ImportDeclaration,
       namedImports: ['jsonSchema'],

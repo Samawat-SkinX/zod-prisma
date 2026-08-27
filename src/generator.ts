@@ -7,7 +7,7 @@ import {
 	VariableDeclarationKind,
 } from 'ts-morph'
 import { Config, PrismaOptions } from './config'
-import { getJSDocs } from './docs'
+import { computeCustomSchema, getJSDocs } from './docs'
 import { setNeedJsonHelper } from './jsonHelper'
 import { EnumModel, getZodConstructor } from './types'
 import { dotSlash, needsRelatedModel, useModelNames, writeArray } from './util'
@@ -45,7 +45,18 @@ export const writeImportsForModel = (
 		})
 	}
 
-	if (model.fields.some((f) => f.type === 'Json')) {
+	// Only import jsonSchema when the generated file actually references it: a
+	// Json field emits `jsonSchema` unless it's overridden by a @zod.custom()
+	// directive. Tr Json fields still need it because the *Response variant
+	// (genTr=false) falls back to jsonSchema for them. Skipping the import when
+	// every Json field has a custom schema avoids an unused-import lint error.
+	if (
+		model.fields.some(
+			(f) =>
+				f.type === 'Json' &&
+				(f.name.endsWith('Tr') || !computeCustomSchema(f.documentation ?? ''))
+		)
+	) {
 		importList.push({
 			kind: StructureKind.ImportDeclaration,
 			namedImports: ['jsonSchema'],
